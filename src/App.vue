@@ -5,9 +5,6 @@
         <div class="navbar-brand">
           <RouterLink to="/">To-Do List</RouterLink>
         </div>
-        <div class="navbar-menu">
-          <RouterLink to="/">Home</RouterLink>
-        </div>
       </nav>
     </div>
   </header>
@@ -46,7 +43,7 @@ header {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  z-index: 1000;
+  z-index: 10;
 }
 
 .navbar-brand {

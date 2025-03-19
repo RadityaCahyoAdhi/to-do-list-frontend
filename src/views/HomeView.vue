@@ -3,40 +3,99 @@
     <section class="todo-app">
       <h1>To-Do List</h1>
       <form @submit.prevent="addTodo">
-        <input type="text" v-model="newTodo" placeholder="Add a new task" maxlength="255" />
-        <button type="submit">Add</button>
+        <input type="text" v-model="newTask" placeholder="Add a new task" maxlength="255" />
+        <button class="btn-primary" type="submit">Add</button>
       </form>
       <ul>
-        <li v-for="(todo, index) in todos" :key="index">
-          <input type="checkbox" v-model="todo.completed" />
-          <span :class="{ completed: todo.completed }" class="todo-text">{{ todo.text }}</span>
-          <button @click="removeTodo(index)">Remove</button>
+        <li v-for="(todo, index) in todos" :key="todo.id_task">
+          <input type="checkbox" v-model="todo.completed" @change="updateTodoStatus(todo)" />
+          <span :class="{ completed: todo.completed }" class="todo-text">{{ todo.task }}</span>
+          <button class="btn-danger" @click="removeTodo(todo.id_task, index)">Remove</button>
         </li>
       </ul>
+      <div v-if="isLoading" class="overlay"></div>
     </section>
   </main>
 </template>
 
 <script>
+import axios from 'axios'
+
 export default {
   name: 'HomeView',
   data() {
     return {
-      url: 'http://127.0.0.1:8000',
-      newTodo: '',
+      isLoading: false,
+      url: 'http://127.0.0.1:8000/api',
+      newTask: '',
       todos: [],
     }
   },
   methods: {
-    addTodo() {
-      if (this.newTodo.trim() !== '') {
-        this.todos.push({ text: this.newTodo, completed: false })
-        this.newTodo = ''
+    // Fetch todos tasks from the API
+    async fetchTodos() {
+      this.isLoading = true
+      try {
+        const response = await axios.get(`${this.url}/tasks`)
+        this.todos = response.data.map((task) => ({
+          id_task: task.id_task,
+          task: task.task,
+          completed: task.completed === 1,
+          completed_at: task.completed_at,
+          created_at: task.created_at,
+          updated_at: task.updated_at,
+        }))
+      } catch (error) {
+        console.error('Error fetching todos:', error)
+      } finally {
+        this.isLoading = false
       }
     },
-    removeTodo(index) {
-      this.todos.splice(index, 1)
+    // Add a new todo
+    async addTodo() {
+      if (this.newTask.trim() !== '') {
+        this.isLoading = true
+        try {
+          const response = await axios.post(`${this.url}/tasks`, {
+            task: this.newTask,
+          })
+          this.todos.push(response.data.item)
+          this.newTask = ''
+        } catch (error) {
+          console.error('Error adding todo:', error)
+        } finally {
+          this.isLoading = false
+        }
+      }
     },
+    // Update the completion status of a todo
+    async updateTodoStatus(todo) {
+      this.isLoading = true
+      try {
+        await axios.put(`${this.url}/tasks/${todo.id_task}`, {
+          completed: todo.completed,
+        })
+      } catch (error) {
+        console.error('Error updating todo completion status:', error)
+      } finally {
+        this.isLoading = false
+      }
+    },
+    // Remove a todo
+    async removeTodo(id_task, index) {
+      this.isLoading = true
+      try {
+        await axios.delete(`${this.url}/tasks/${id_task}`)
+        this.todos.splice(index, 1)
+      } catch (error) {
+        console.error('Error removing todo:', error)
+      } finally {
+        this.isLoading = false
+      }
+    },
+  },
+  mounted() {
+    this.fetchTodos()
   },
 }
 </script>
@@ -83,14 +142,25 @@ input[type='text'] {
 button {
   padding: 0.5rem 1rem;
   border: none;
-  background-color: #007bff;
   color: #fff;
   border-radius: 4px;
   cursor: pointer;
 }
 
-button:hover {
-  background-color: #0056b3;
+.btn-primary {
+  background-color: #007bff;
+}
+
+.btn-primary:hover {
+  background-color: #0069d9;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
 }
 
 ul {
@@ -123,8 +193,18 @@ input[type='checkbox'] {
   flex: 1;
   white-space: normal;
   word-wrap: break-word;
-  margin-right: 1rem;
+  padding-right: 1rem;
   max-width: calc(100% - 100px);
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
 }
 
 /* Media queries for responsiveness */
